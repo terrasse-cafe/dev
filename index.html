@@ -2780,6 +2780,8 @@ function renderB(){
   const wrap=document.getElementById('b-days-wrap');wrap.innerHTML='';
   DAYS.forEach(day=>{
     const isClosed=(closedDays[wk]||new Set()).has(day.id);
+    const dayShifts=SHIFTS[day.id]||[];
+    const isDayComplet=!isClosed&&dayShifts.length>0&&dayShifts.every(sh=>computePlacesForShift(wk,sh)===0);
     const dayData=bSel[wk][day.id]||null;
     const enabled=!!(dayData);
     const card=document.createElement('div');card.className='b-day-card'+(enabled?' active':'');
@@ -2801,30 +2803,21 @@ function renderB(){
       badge.style.cssText='display:inline-flex;align-items:center;background:#FDA1A1;color:#1C1917;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:0.03em;white-space:nowrap;';
       head.appendChild(title);head.appendChild(badge);
     } else {
-      head.appendChild(title);head.appendChild(toggleLabel);
+      head.appendChild(title);
+      if(isDayComplet){
+        const completBadge=document.createElement('span');
+        completBadge.textContent='COMPLET';
+        completBadge.style.cssText='display:inline-flex;align-items:center;background:#FDA1A1;color:#1C1917;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:0.03em;white-space:nowrap;margin-right:8px;';
+        const rightWrap=document.createElement('div');
+        rightWrap.style.cssText='display:flex;align-items:center;';
+        rightWrap.appendChild(completBadge);
+        rightWrap.appendChild(toggleLabel);
+        head.appendChild(rightWrap);
+      } else {
+        head.appendChild(toggleLabel);
+      }
     }
     card.appendChild(head);
-    if(!isClosed){
-      const dayShifts=SHIFTS[day.id]||[];
-      const hasMultiple=dayShifts.length>1;
-      const badgeRow=document.createElement('div');
-      badgeRow.style.cssText='display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;';
-      dayShifts.forEach(sh=>{
-        const places=computePlacesForShift(wk,sh);
-        const badge=document.createElement('span');
-        const icon=hasMultiple?(sh.label==='Jour'?SVG_SUN:SVG_MOON):SVG_SUN;
-        const placesTxt=places===0?'COMPLET':places+(places===1?' place':' places');
-        badge.innerHTML=icon+' '+placesTxt;
-        const colorCss=places===0
-          ?'background:#FDA1A1;color:#1C1917;'
-          :places>=4
-            ?'background:var(--accent);color:#1C1917;'
-            :'background:transparent;border:1px solid var(--border);color:var(--text-2);';
-        badge.style.cssText='display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:0.03em;white-space:nowrap;'+colorCss;
-        badgeRow.appendChild(badge);
-      });
-      card.appendChild(badgeRow);
-    }
     // Bornes personnalisées si bénévole récurrent avec schedule_json
     const _vn=document.getElementById('vol-select').value;
     const _vp=_vn?getPerson(_vn):null;
