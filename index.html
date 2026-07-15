@@ -247,7 +247,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-dz.filled.da:hover,.h-dz.filled.ha:hover,.h-dz.filled.da.dok,.h-dz.filled.ha.dok{border-color:#D97706;box-shadow:0 0 0 2px #FDDFBE,inset 0 0 0 9999px rgba(217,119,6,0.07)}
 .avail-chip{position:absolute;overflow:hidden;border-radius:4px;cursor:pointer;transition:filter .1s;min-height:26px}
 .avail-chip:hover{filter:brightness(.9)}
-#chip-pref-tooltip{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);padding:5px 10px;font-size:11px;color:var(--text-2);pointer-events:none;opacity:0;transition:opacity .15s;z-index:500;white-space:nowrap}
+#chip-pref-tooltip{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);padding:5px 10px;font-size:11px;color:var(--text-2);pointer-events:none;opacity:0;transition:opacity .15s;z-index:500;white-space:pre-line}
 #chip-pref-tooltip.visible{opacity:1}
 .chip-covered-content{position:absolute;top:0;right:0;bottom:0;left:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:2px}
 .avail-chip-inner{display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;flex:0 0 auto}
@@ -3621,17 +3621,11 @@ function renderHoraire(){
         const uncovIvs=[];let ucCur=earlyStart;
         for(const iv of covUnion){if(iv.s>ucCur)uncovIvs.push({s:ucCur,e:iv.s});ucCur=Math.max(ucCur,iv.e);}
         if(ucCur<lateEnd)uncovIvs.push({s:ucCur,e:lateEnd});
-        uncovIvs.forEach(u=>{
-          const hatchDiv=document.createElement('div');
-          hatchDiv.style.position='absolute';
-          hatchDiv.style.top='0';
-          hatchDiv.style.bottom='0';
-          hatchDiv.style.left=Math.round(toPx(u.s)-toPx(earlyStart))+'px';
-          hatchDiv.style.width=Math.round(toPx(u.e)-toPx(u.s))+'px';
-          hatchDiv.style.background=hatchPat;
-          hatchDiv.style.pointerEvents='none';
-          dz.appendChild(hatchDiv);
-        });
+        if(uncovIvs.length>0){
+          const hatchLayer=document.createElement('div');
+          hatchLayer.style.cssText='position:absolute;inset:0;z-index:0;background:'+hatchPat+';pointer-events:none;';
+          dz.appendChild(hatchLayer);
+        }
         let chipTopCur=2;
         chipData.forEach(cd=>{
           const{assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
@@ -3660,6 +3654,7 @@ function renderHoraire(){
           else chipLevel=5;
           const _ci=(!emp&&!past)?getDispoChangeInfo(wk,assignedName,sh.id,role,sh,curDay):null;
           const chip=document.createElement('div');chip.className='avail-chip';
+          chip.style.zIndex='1';
           if(past)chip.classList.add('past');
           chip.style.top=chipTopCur+'px';
           chip.style.height=chipH+'px';
@@ -3782,7 +3777,8 @@ function renderHoraire(){
               const tt=document.getElementById('chip-pref-tooltip');
               chip.addEventListener('mouseenter',()=>{
                 chip._ttTimer=setTimeout(()=>{
-                  tt.textContent='Rôles préférés : '+prefs.map((r,i)=>i===0?r:r.charAt(0).toLowerCase()+r.slice(1)).join(', ');
+                  const _prefStr='Rôles préférés : '+prefs.map((r,i)=>i===0?r:r.charAt(0).toLowerCase()+r.slice(1)).join(', ');
+                  tt.textContent=(chipLevel>=4&&_pch)?fullName(_pch)+'\n'+_prefStr:_prefStr;
                   const rect=chip.getBoundingClientRect();
                   tt.style.left=rect.left+'px';
                   tt.style.top=(rect.top-6)+'px';
@@ -4031,17 +4027,11 @@ function renderHoraire(){
         const uncovIvs=[];let ucCur=earlyStart;
         for(const iv of covUnion){if(iv.s>ucCur)uncovIvs.push({s:ucCur,e:iv.s});ucCur=Math.max(ucCur,iv.e);}
         if(ucCur<lateEnd)uncovIvs.push({s:ucCur,e:lateEnd});
-        uncovIvs.forEach(u=>{
-          const hatchDiv=document.createElement('div');
-          hatchDiv.style.position='absolute';
-          hatchDiv.style.top='0';
-          hatchDiv.style.bottom='0';
-          hatchDiv.style.left=Math.round(toPx(u.s)-toPx(earlyStart))+'px';
-          hatchDiv.style.width=Math.round(toPx(u.e)-toPx(u.s))+'px';
-          hatchDiv.style.background=hatchPat;
-          hatchDiv.style.pointerEvents='none';
-          dz.appendChild(hatchDiv);
-        });
+        if(uncovIvs.length>0){
+          const hatchLayer=document.createElement('div');
+          hatchLayer.style.cssText='position:absolute;inset:0;z-index:0;background:'+hatchPat+';pointer-events:none;';
+          dz.appendChild(hatchLayer);
+        }
 
         let chipTopCur=2;
         chipData.forEach((cd)=>{
@@ -4073,6 +4063,7 @@ function renderHoraire(){
           const _ci=(!emp&&!past)?getDispoChangeInfo(wk,assignedName,shift.id,role,shift,curDay):null;
 
           const chip=document.createElement('div');chip.className='avail-chip';
+          chip.style.zIndex='1';
           if(past)chip.classList.add('past');
           chip.style.top=chipTopCur+'px';
           chip.style.height=chipH+'px';
@@ -4197,7 +4188,8 @@ function renderHoraire(){
               const tt=document.getElementById('chip-pref-tooltip');
               chip.addEventListener('mouseenter',()=>{
                 chip._ttTimer=setTimeout(()=>{
-                  tt.textContent='Rôles préférés : '+prefs.map((r,i)=>i===0?r:r.charAt(0).toLowerCase()+r.slice(1)).join(', ');
+                  const _prefStr='Rôles préférés : '+prefs.map((r,i)=>i===0?r:r.charAt(0).toLowerCase()+r.slice(1)).join(', ');
+                  tt.textContent=(chipLevel>=4&&_pch)?fullName(_pch)+'\n'+_prefStr:_prefStr;
                   const rect=chip.getBoundingClientRect();
                   tt.style.left=rect.left+'px';
                   tt.style.top=(rect.top-6)+'px';
