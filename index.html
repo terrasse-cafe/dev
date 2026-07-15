@@ -3621,12 +3621,17 @@ function renderHoraire(){
         const uncovIvs=[];let ucCur=earlyStart;
         for(const iv of covUnion){if(iv.s>ucCur)uncovIvs.push({s:ucCur,e:iv.s});ucCur=Math.max(ucCur,iv.e);}
         if(ucCur<lateEnd)uncovIvs.push({s:ucCur,e:lateEnd});
-        if(uncovIvs.length>0){
-          dz.style.backgroundImage=uncovIvs.map(()=>hatchPat).join(',');
-          dz.style.backgroundSize=uncovIvs.map(u=>`${Math.round(toPx(u.e)-toPx(u.s))}px 100%`).join(',');
-          dz.style.backgroundPosition=uncovIvs.map(u=>`${Math.round(toPx(u.s)-toPx(earlyStart))}px 0`).join(',');
-          dz.style.backgroundRepeat=uncovIvs.map(()=>'no-repeat').join(',');
-        }
+        uncovIvs.forEach(u=>{
+          const hatchDiv=document.createElement('div');
+          hatchDiv.style.position='absolute';
+          hatchDiv.style.top='0';
+          hatchDiv.style.bottom='0';
+          hatchDiv.style.left=Math.round(toPx(u.s)-toPx(earlyStart))+'px';
+          hatchDiv.style.width=Math.round(toPx(u.e)-toPx(u.s))+'px';
+          hatchDiv.style.background=hatchPat;
+          hatchDiv.style.pointerEvents='none';
+          dz.appendChild(hatchDiv);
+        });
         let chipTopCur=2;
         chipData.forEach(cd=>{
           const{assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
@@ -4026,12 +4031,17 @@ function renderHoraire(){
         const uncovIvs=[];let ucCur=earlyStart;
         for(const iv of covUnion){if(iv.s>ucCur)uncovIvs.push({s:ucCur,e:iv.s});ucCur=Math.max(ucCur,iv.e);}
         if(ucCur<lateEnd)uncovIvs.push({s:ucCur,e:lateEnd});
-        if(uncovIvs.length>0){
-          dz.style.backgroundImage=uncovIvs.map(()=>hatchPat).join(',');
-          dz.style.backgroundSize=uncovIvs.map(u=>`${Math.round(toPx(u.e)-toPx(u.s))}px 100%`).join(',');
-          dz.style.backgroundPosition=uncovIvs.map(u=>`${Math.round(toPx(u.s)-toPx(earlyStart))}px 0`).join(',');
-          dz.style.backgroundRepeat=uncovIvs.map(()=>'no-repeat').join(',');
-        }
+        uncovIvs.forEach(u=>{
+          const hatchDiv=document.createElement('div');
+          hatchDiv.style.position='absolute';
+          hatchDiv.style.top='0';
+          hatchDiv.style.bottom='0';
+          hatchDiv.style.left=Math.round(toPx(u.s)-toPx(earlyStart))+'px';
+          hatchDiv.style.width=Math.round(toPx(u.e)-toPx(u.s))+'px';
+          hatchDiv.style.background=hatchPat;
+          hatchDiv.style.pointerEvents='none';
+          dz.appendChild(hatchDiv);
+        });
 
         let chipTopCur=2;
         chipData.forEach((cd)=>{
@@ -5980,6 +5990,7 @@ function buildPdfBlob(){
             const savedDay=curDay; curDay=day.id;
             const rng = isEmp(name)?null:volDayRange(wk,name); curDay=savedDay;
             let timeStr='';
+            let sortS=shift.fromH*60, sortE=shift.toH*60;
             if(ct){
               let dispS=ct.s, dispE=ct.e;
               if(isEmp(name)){
@@ -5989,18 +6000,25 @@ function buildPdfBlob(){
                 dispS=(es&&es.s<gridStartMins__&&ct.s===gridStartMins__)?es.s:ct.s;
                 dispE=ct.e;
               }
+              sortS=dispS; sortE=dispE;
               timeStr=mStr(dispS)+' – '+mStr(dispE);
             }
             else if(isEmp(name)){
               const es=empSchedule(name,day.id);
               const dispS=es?es.s:shift.fromH*60;
               const dispE=es?Math.min(es.e,shift.toH*60):shift.toH*60;
+              sortS=dispS; sortE=dispE;
               timeStr=mStr(dispS)+' – '+mStr(dispE);
             }
-            else if(rng){ timeStr=mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
+            else if(rng){
+              sortS=Math.max(rng.startMins,shift.fromH*60);
+              sortE=Math.min(rng.endMins,shift.toH*60);
+              timeStr=mStr(sortS)+' – '+mStr(sortE);
+            }
             const _ppdf=getPerson(name);
-            return {name:_ppdf?fullName(_ppdf):name, timeStr, note:getAssignNote(wk,shift.id,role,name)||''};
+            return {name:_ppdf?fullName(_ppdf):name, timeStr, note:getAssignNote(wk,shift.id,role,name)||'', sortS, sortE};
           });
+          entries.sort((a,b)=>a.sortS!==b.sortS?a.sortS-b.sortS:(a.sortE-a.sortS)-(b.sortE-b.sortS));
         }
         rows.push({shift, role, isOpt, entries});
       });
