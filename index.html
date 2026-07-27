@@ -3436,7 +3436,8 @@ function renderHoraire(){
   const wk=wkey(oMon),wkData=avail[wk]||{};
   const day=DAYS.find(d=>d.id===curDay);
   const shifts=SHIFTS[curDay]||[];
-  const dSH=(day.gridH!==undefined?day.gridH:day.oH)+day.oM/60;
+  let dSH=(day.gridH!==undefined?day.gridH:day.oH)+day.oM/60;
+  if(day.id==='dimanche'&&isBrunchActive(wk))dSH=8.5;
   const dEH=shifts.length?Math.max(...shifts.map(s=>s.toH)):day.cH+day.cM/60;
   const numSlots=Math.round((dEH-dSH)*2);
   const numHours=Math.round(dEH-dSH);
@@ -3957,7 +3958,8 @@ function renderHoraire(){
       row.appendChild(ncWrap);
       const tl=document.createElement('div');tl.className='h-timeline';tl.style.width=tl.style.minWidth=TW+'px';
       const dz=document.createElement('div');dz.className='h-dz';
-      const dzFromH=(shift.slotFromH&&shift.slotFromH[roleDisplayLabel(role)]!=null)?shift.slotFromH[roleDisplayLabel(role)]:shift.fromH;
+      let dzFromH=(shift.slotFromH&&shift.slotFromH[roleDisplayLabel(role)]!=null)?shift.slotFromH[roleDisplayLabel(role)]:shift.fromH;
+      if(curDay==='dimanche'&&isBrunchActive(wk))dzFromH=8.5;
       const dzToH=(shift.slotToH&&shift.slotToH[roleDisplayLabel(role)]!=null)?shift.slotToH[roleDisplayLabel(role)]:shift.toH;
       dz.style.left=toPx(dzFromH)+'px';dz.style.width=(toPx(dzToH)-toPx(dzFromH))+'px';
       dz.id='dz-'+shift.id+'-'+role.replace(/[^a-z0-9]/gi,'_');
