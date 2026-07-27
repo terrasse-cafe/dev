@@ -4758,7 +4758,7 @@ function updateResetBtn(){
     if(_applyBtn)_applyBtn.style.display='none';
     return;
   }
-  const newClampedS=Math.max(newRange.startMins,tpCtx.shift.fromH*60);
+  const newClampedS=Math.max(newRange.startMins,shiftFloorMins(tpCtx.wk,tpCtx.shift));
   const newClampedE=Math.min(newRange.endMins,tpCtx.shift.toH*60);
   if(newClampedE<=newClampedS){
     tpCtx.dispoCase=5;
