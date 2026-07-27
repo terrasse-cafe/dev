@@ -3214,12 +3214,18 @@ function setDayOpen(open){
 }
 
 /* ── avail helpers ── */
+function volAvailFloorMins(wk,dayId){
+  const day=DAYS.find(d=>d.id===dayId);
+  if(!day)return 0;
+  if(day.id==='dimanche'&&isBrunchActive(wk))return 510;
+  return day.oH*60+(day.oM||0);
+}
 function volDayRange(wk,name){
   const entry=(avail[wk]||{})[name];
   if(entry){
     const slots=entry.slots||{};
     const day=DAYS.find(d=>d.id===curDay);if(!day)return null;
-    const openS=Math.round((day.oH*60+(day.oM||0)-GSH*60)/30);
+    const openS=Math.round((volAvailFloorMins(wk,curDay)-GSH*60)/30);
     const closeS=Math.round((day.cH*60+(day.cM||0)-GSH*60)/30);
     let first=null,last=null;
     for(let s=openS;s<closeS;s++){if(slots[skey(curDay,s)]){if(first===null)first=s;last=s+1;}}
@@ -5430,7 +5436,7 @@ function volDayRangeFor(wk,name,dayId){
   if(entry){
     const slots=entry.slots||{};
     const day=DAYS.find(d=>d.id===dayId);if(!day)return null;
-    const openS=Math.round((day.oH*60+(day.oM||0)-GSH*60)/30);
+    const openS=Math.round((volAvailFloorMins(wk,dayId)-GSH*60)/30);
     const closeS=Math.round((day.cH*60+(day.cM||0)-GSH*60)/30);
     let first=null,last=null;
     for(let s=openS;s<closeS;s++){if(slots[skey(dayId,s)]){if(first===null)first=s;last=s+1;}}
