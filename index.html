@@ -1609,6 +1609,10 @@ async function saveSlotOverrides() {
 }
 function isBrunchActive(wk){ return brunchWeeks.has(wk); }
 function isSunEventActive(wk,role){ return isBrunchActive(wk); }
+function shiftFloorMins(wk,shift){
+  const dayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===shift.id));
+  return (dayId==='dimanche'&&isBrunchActive(wk))?510:shift.fromH*60;
+}
 async function loadBrunchWeeks(){
   if(!sb)return;
   brunchWeeks=new Set();
@@ -2724,7 +2728,7 @@ function computePlacesForShift(wk,sh){
   });
   const totalRoles=roles.length;
   const dayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===sh.id));
-  const shiftS=sh.fromH*60;
+  const shiftS=shiftFloorMins(wk,sh);
   const shiftE=sh.toH*60;
   const counted=new Set();
 
@@ -4378,11 +4382,11 @@ function volAssignedToShift(wk,name,shift,testIv=null){
 function overlapMins(wk,name,shift){
   if(draggingVolFreeIvs&&draggingVolFreeIvs.length===1){
     const iv=draggingVolFreeIvs[0];
-    const s=Math.max(iv.s,shift.fromH*60);const e=Math.min(iv.e,shift.toH*60);
+    const s=Math.max(iv.s,shiftFloorMins(wk,shift));const e=Math.min(iv.e,shift.toH*60);
     if(e<=s)return null;return{s,e};
   }
   const r=volDayRange(wk,name);if(!r)return null;
-  const s=Math.max(r.startMins,shift.fromH*60);const e=Math.min(r.endMins,shift.toH*60);
+  const s=Math.max(r.startMins,shiftFloorMins(wk,shift));const e=Math.min(r.endMins,shift.toH*60);
   if(e<=s)return null;return{s,e};
 }
 
@@ -4724,9 +4728,9 @@ function tpOriginalTimes(wk,name,sid,shift,empDayId){
     return{s:shift.fromH*60,e:shift.toH*60};
   }
   const recur=volRecurSchedule(wk,name,empDayId);
-  if(recur)return{s:Math.max(recur.s,shift.fromH*60),e:Math.min(recur.e,shift.toH*60)};
+  if(recur)return{s:Math.max(recur.s,shiftFloorMins(wk,shift)),e:Math.min(recur.e,shift.toH*60)};
   const rng=volDayRangeFor(wk,name,empDayId);
-  if(rng)return{s:Math.max(rng.startMins,shift.fromH*60),e:Math.min(rng.endMins,shift.toH*60)};
+  if(rng)return{s:Math.max(rng.startMins,shiftFloorMins(wk,shift)),e:Math.min(rng.endMins,shift.toH*60)};
   return{s:shift.fromH*60,e:shift.toH*60};
 }
 function fmtMins(m){const h=Math.floor(m/60),mn=m%60;return mn?`${h}h${String(mn).padStart(2,'0')}`:`${h}h`;}
@@ -5451,7 +5455,7 @@ function volDayRangeFor(wk,name,dayId){
 }
 function overlapFor(wk,name,shift,dayId){
   const r=volDayRangeFor(wk,name,dayId);if(!r)return null;
-  const s=Math.max(r.startMins,shift.fromH*60);const e=Math.min(r.endMins,shift.toH*60);
+  const s=Math.max(r.startMins,shiftFloorMins(wk,shift));const e=Math.min(r.endMins,shift.toH*60);
   if(e<=s)return null;return{s,e};
 }
 function getDispoChangeInfo(wk,name,sid,role,shift,dayId){
@@ -5463,7 +5467,7 @@ function getDispoChangeInfo(wk,name,sid,role,shift,dayId){
   const isLate=getAssignLate(wk,sid,role,name);
   const newRange=volDayRangeFor(wk,name,dayId);
   if(!newRange)return{case:5,isLate};
-  const newClampedS=Math.max(newRange.startMins,shift.fromH*60);
+  const newClampedS=Math.max(newRange.startMins,shiftFloorMins(wk,shift));
   const newClampedE=Math.min(newRange.endMins,shift.toH*60);
   if(newClampedE<=newClampedS)return{case:5,isLate};
   if(newClampedS<=ct.s&&newClampedE>=ct.e)return null;
@@ -5476,7 +5480,7 @@ function volCoversShiftFor(wk,name,shift,dayId){
     return es.s<shift.toH*60&&es.e>shift.fromH*60;
   }
   const r=volDayRangeFor(wk,name,dayId);
-  return r&&r.startMins<shift.toH*60&&r.endMins>shift.fromH*60;
+  return r&&r.startMins<shift.toH*60&&r.endMins>shiftFloorMins(wk,shift);
 }
 
 /* ── Helpers quota ── */
