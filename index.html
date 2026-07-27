@@ -2672,7 +2672,7 @@ function buildTimeSelect(day, type, savedVal, minMins=null, maxMins=null){
   let startM = day.oH*60+day.oM, endM = day.cH*60+day.cM;
   // Appliquer les bornes personnalisées AVANT le décalage +/-30
   // pour que minMins/maxMins soient respectés même hors des heures du café
-  if(minMins !== null) startM = type==='from' ? minMins : Math.max(startM+30, minMins+30);
+  if(minMins !== null) startM = type==='from' ? minMins : minMins+30;
   else if(type==='to') startM += 30;
   if(maxMins !== null) endM = maxMins;
   else if(type==='from') endM -= 30;
@@ -2818,10 +2818,11 @@ function renderB(){
     const _vp=_vn?getPerson(_vn):null;
     const _cafO=day.oH*60+day.oM, _cafC=day.cH*60+day.cM;
     let fromMin=null, toMax=null;
+    if(day.id==='dimanche'&&isBrunchActive(wk))fromMin=510;
     if(_vp&&_vp.type==='vol'&&_vp.schedule_json){
       const sj=_vp.schedule_json[day.id];
       if(sj&&sj.on!==false&&sj.s!=null&&sj.e!=null){
-        if(sj.s<_cafO) fromMin=sj.s;
+        if(sj.s<(fromMin??_cafO)) fromMin=sj.s;
         if(sj.e>_cafC) toMax=sj.e;
       }
     }
@@ -4810,6 +4811,7 @@ function openTP(e,name,sid,role,shift,wk){
     toMax   = dzToH2 * 60;
   }
 
+  if(day.id==='dimanche'&&isBrunchActive(wk))fromMin=Math.min(fromMin,510);
   const orig = tpOriginalTimes(wk, name, sid, shift, empDayId);
   const safeStart = ct ? Math.max(fromMin, Math.min(ct.s, toMax-30)) : Math.max(fromMin, Math.min(orig.s, toMax-30));
   const safeEnd   = ct ? Math.max(safeStart+30, Math.min(ct.e, toMax)) : Math.max(safeStart+30, Math.min(orig.e, toMax));
