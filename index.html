@@ -624,6 +624,13 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
           Fermé
         </button>
       </div>
+      <div id="brunch-toggle-wrap" style="display:none;align-items:center;gap:6px">
+        <span style="font-size:12px;font-weight:500;color:var(--text)">Brunch</span>
+        <label class="tog-switch" title="Activer le brunch du dimanche">
+          <input type="checkbox" id="brunch-toggle-input" onchange="setBrunch(this.checked)">
+          <div class="tog-track"><div class="tog-thumb"></div></div>
+        </label>
+      </div>
     </div>
     <div class="h-layout">
       <div>
@@ -1361,7 +1368,7 @@ let oMon=(()=>{
   if(_savedWk){const _d=new Date(_savedWk+'T00:00:00');if(!isNaN(_d)&&_d.getDay()===1)return _d;}
   return getMonday(new Date());
 })();
-let sundayEventRoles={}; // {wk: Set<string>} — rôles événement dimanche actifs par semaine
+let brunchWeeks=new Set(); // Set<wk> — semaines où le brunch du dimanche est actif
 let trainingRoleShifts=new Set(); // Set<"wk|shiftId"> — shifts où Bénévole en formation est actif
 
 // Semaine bénévole : si on est lun-mer → semaine prochaine (prochain jeudi)
@@ -1600,45 +1607,33 @@ async function saveSlotOverrides() {
     { onConflict: 'key' }
   );
 }
-function isSunEventActive(wk,role){
-  return sundayEventRoles[wk]?.has(role)||false;
-}
-async function loadSundayEventRoles(){
+function isBrunchActive(wk){ return brunchWeeks.has(wk); }
+function isSunEventActive(wk,role){ return isBrunchActive(wk); }
+async function loadBrunchWeeks(){
   if(!sb)return;
-  sundayEventRoles={};
-  const {data}=await sb.from('org_config').select('value').eq('key','sunday_event_roles').maybeSingle();
+  brunchWeeks=new Set();
+  const {data}=await sb.from('org_config').select('value').eq('key','brunch_weeks').maybeSingle();
   if(!data?.value)return;
-  try{
-    const obj=JSON.parse(data.value);
-    Object.entries(obj).forEach(([week,roles])=>{
-      sundayEventRoles[week]=new Set(roles);
-    });
-  }catch(e){console.error('loadSundayEventRoles:',e);}
+  try{const arr=JSON.parse(data.value);if(Array.isArray(arr))brunchWeeks=new Set(arr);}
+  catch(e){console.error('loadBrunchWeeks:',e);}
 }
-async function saveSundayEventRoles(){
+async function saveBrunchWeeks(){
   if(!sb)return;
-  const toSave={};
-  Object.entries(sundayEventRoles).forEach(([week,set])=>{
-    if(set.size>0)toSave[week]=[...set];
-  });
-  await sb.from('org_config').upsert({key:'sunday_event_roles',value:JSON.stringify(toSave)},{onConflict:'key'});
+  await sb.from('org_config').upsert({key:'brunch_weeks',value:JSON.stringify([...brunchWeeks])},{onConflict:'key'});
 }
-async function toggleSundayEventRole(wk,role){
-  if(!sundayEventRoles[wk])sundayEventRoles[wk]=new Set();
-  if(sundayEventRoles[wk].has(role)){
-    sundayEventRoles[wk].delete(role);
-    // Désassigner tous les occupants de ce rôle sur le dimanche de cette semaine
+async function setBrunch(on){
+  const wk=wkey(oMon);
+  if(on){brunchWeeks.add(wk);}
+  else{
+    brunchWeeks.delete(wk);
     const sh=SHIFTS.dimanche[0];
-    const names=getAssigns(wk,sh.id,role).slice();
-    for(const name of names){
-      removeAssign(wk,sh.id,role,name);
-      await deleteAssignment(wk,sh.id,role,name);
+    for(const role of ['Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe']){
+      const names=getAssigns(wk,sh.id,role).slice();
+      for(const name of names){removeAssign(wk,sh.id,role,name);await deleteAssignment(wk,sh.id,role,name);}
     }
-  } else {
-    sundayEventRoles[wk].add(role);
   }
-  await saveSundayEventRoles();
-  renderHoraire();
+  await saveBrunchWeeks();
+  renderStatusToggle();renderHoraire();
 }
 
 function trainingKey(wk,shiftId){return wk+'|'+shiftId;}
@@ -1814,8 +1809,8 @@ function subscribeRealtimeVol(wk){
     .on('postgres_changes',{event:'*',schema:'public',table:'org_config'},
       async payload=>{
         const key=payload.new?.key||payload.old?.key;
-        if(key==='sunday_event_roles'){
-          await loadSundayEventRoles();
+        if(key==='brunch_weeks'){
+          await loadBrunchWeeks();
           if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
         }else if(key==='slot_overrides'){
           await loadSlotOverrides();
@@ -1836,7 +1831,7 @@ async function bootOrgData() {
   await loadAvail(wk);
   await loadAssignments(wk);
   await loadSlotOverrides();
-  await loadSundayEventRoles();
+  await loadBrunchWeeks();
   await loadTrainingRoleShifts();
   const {data:cdRow}=await sb.from('org_config').select('value').eq('key','closed_days').maybeSingle();
   if(cdRow?.value){
@@ -1860,7 +1855,7 @@ async function bootVolData(wk) {
     loadAvail(wk),
     loadAvail(prevWk),
     loadClosedDaysForVol(),
-    loadSundayEventRoles(),
+    loadBrunchWeeks(),
     loadTrainingRoleShifts(),
     loadAssignments(wk),
   ]);
@@ -3186,6 +3181,19 @@ function renderStatusToggle(){
   const dayPast=isPastDay();
   btnOpen.classList.toggle('past-readonly',dayPast);
   btnClosed.classList.toggle('past-readonly',dayPast);
+  const brunchWrap=document.getElementById('brunch-toggle-wrap');
+  const brunchInput=document.getElementById('brunch-toggle-input');
+  if(brunchWrap&&brunchInput){
+    if(curDay==='dimanche'){
+      brunchWrap.style.display='flex';
+      brunchInput.checked=isBrunchActive(wk);
+      brunchInput.disabled=dayPast;
+      brunchWrap.style.opacity=dayPast?'0.55':'1';
+      brunchWrap.style.pointerEvents=dayPast?'none':'auto';
+    }else{
+      brunchWrap.style.display='none';
+    }
+  }
 }
 
 function setDayOpen(open){
@@ -3933,12 +3941,12 @@ function renderHoraire(){
       if(isToggle)nc.title=roleDisplayLabel(role);
       const ncWrap=document.createElement('div');ncWrap.className='h-role-name-wrap';
       ncWrap.appendChild(nc);
-      if(isToggle){
+      if(isToggle && roleDisplayLabel(role)==='Bénévole en formation'){
         const togWrap=document.createElement('div');togWrap.className='tog-switch-wrap';
         const togLabel=document.createElement('label');togLabel.className='tog-switch';
         togLabel.title=isActive?'Désactiver ce rôle':'Activer ce rôle';
         const togInput=document.createElement('input');togInput.type='checkbox';togInput.checked=isActive;
-        togInput.addEventListener('change',async(e)=>{e.stopPropagation();if(roleDisplayLabel(role)==='Bénévole en formation'){await toggleTrainingRoleShift(wk,shift);}else{await toggleSundayEventRole(wk,role);}});
+        togInput.addEventListener('change',async(e)=>{e.stopPropagation();await toggleTrainingRoleShift(wk,shift);});
         const togTrack=document.createElement('div');togTrack.className='tog-track';
         const togThumb=document.createElement('div');togThumb.className='tog-thumb';
         togTrack.appendChild(togThumb);
