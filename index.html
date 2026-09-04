@@ -2398,7 +2398,7 @@ function buildShiftChips(){
       buildShiftChips();
       const showWeek=opt.value!==0;
       document.getElementById('b-week-section').style.display=showWeek?'block':'none';
-      if(showWeek)renderB();
+      if(showWeek)renderB();else{const _gtb=document.getElementById('b-gt-banner');if(_gtb)_gtb.style.display='none';}
     };
     wrap.appendChild(btn);
   });
@@ -2994,6 +2994,7 @@ async function copyPrevWeek(){
   if(showWeek)renderB();
 }
 function applyBPastState(readOnly,locked=false){
+  const _gtb=document.getElementById('b-gt-banner');if(_gtb)_gtb.style.display='none';
   const inactive=readOnly||locked;
   const notice=document.getElementById('b-past-notice');
   if(locked){
