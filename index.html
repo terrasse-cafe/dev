@@ -4534,7 +4534,7 @@ function volWeekShiftCount(wk, name) {
 
 function renderHoraireGT(){
   const wk=wkey(oMon),dayId=curDay;
-  const GT_FROM=9,GT_TO=22;
+  const GT_FROM=9,GT_TO=(getActiveDay(wk,dayId)||{cH:22}).cH;
   const CHIP_H_BASE=26;
   const numSlots=(GT_TO-GT_FROM)*2;
   const hScroll=document.querySelector('.h-scroll');
