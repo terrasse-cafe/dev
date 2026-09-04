@@ -4474,6 +4474,14 @@ function volTotalAvailMins(wk,name){
   return 0;
 }
 function volAssignedMins(wk,name){
+  if(isGrandeTablee(wk)){
+    const gtShiftId='gt-'+curDay;let total=0;
+    getGtRoles(wk,curDay).forEach(role=>{
+      if(!getAssigns(wk,gtShiftId,role.id).includes(name))return;
+      const ct=getAssignTimes(wk,gtShiftId,role.id,name);
+      if(ct)total+=ct.e-ct.s;
+    });return total;
+  }
   const shifts=SHIFTS[curDay]||[];let total=0;
   shifts.forEach(sh=>{
     const allR=[...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])];
@@ -5840,7 +5848,7 @@ function volDayRangeFor(wk,name,dayId){
   const entry=(avail[wk]||{})[name];
   if(entry){
     const slots=entry.slots||{};
-    const day=DAYS.find(d=>d.id===dayId);if(!day)return null;
+    const day=getActiveDay(wk,dayId);if(!day)return null;
     const openS=Math.round((volAvailFloorMins(wk,dayId)-GSH*60)/30);
     const closeS=Math.round((day.cH*60+(day.cM||0)-GSH*60)/30);
     let first=null,last=null;
