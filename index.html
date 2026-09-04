@@ -97,6 +97,7 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:clip}
 .wbtn-left svg{transform:scaleX(-1)}
 /* Day tabs : pill buttons, outlined non-sélectionné, filled primary sélectionné */
 .day-tab{height:32px;padding:0 14px;border-radius:100px;border:1px solid #E1DDD9;background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text);transition:all .15s;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;gap:4px;box-shadow:none;min-width:115px;max-width:115px;width:115px}
+.gt-tabs .day-tab{min-width:82px;max-width:82px;width:82px}
 .day-tab:hover{background:var(--bg)}
 .day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
 .day-tab .day-letter{font-weight:700}
@@ -1077,7 +1078,7 @@ const TRANSLATIONS={
     toast:'✓ Disponibilités enregistrées. Merci !',
     shift_none:'0',
     shift_any:'Peu importe',
-    day_jeudi:'Jeudi',day_vendredi:'Vendredi',day_samedi:'Samedi',day_dimanche:'Dimanche',
+    day_lundi:'Lundi',day_mardi:'Mardi',day_mercredi:'Mercredi',day_jeudi:'Jeudi',day_vendredi:'Vendredi',day_samedi:'Samedi',day_dimanche:'Dimanche',
     greeting:'Bonjour',
     pin_sub_enter:'Entrez votre code PIN à 4 chiffres.',
     pin_sub_existing:pin=>'Votre PIN est : '+pin+'  — entrez-le ci-dessous.',
@@ -1124,7 +1125,7 @@ const TRANSLATIONS={
     toast:'✓ Availability saved. Thank you!',
     shift_none:'0',
     shift_any:'Any',
-    day_jeudi:'Thursday',day_vendredi:'Friday',day_samedi:'Saturday',day_dimanche:'Sunday',
+    day_lundi:'Monday',day_mardi:'Tuesday',day_mercredi:'Wednesday',day_jeudi:'Thursday',day_vendredi:'Friday',day_samedi:'Saturday',day_dimanche:'Sunday',
     greeting:'Hello',
     pin_sub_enter:'Enter your 4-digit PIN.',
     pin_sub_existing:pin=>'Your PIN is: '+pin+'  — enter it below.',
@@ -1199,6 +1200,7 @@ const DAYS=[
   {id:'dimanche', label:'Dimanche', oH:11,oM:0, cH:17,cM:0,  dow:6, gridH:10},
 ];
 const GT_DAYS=[
+  {id:'lundi',    label:'Lundi',    oH:9,oM:0,cH:22,cM:0,dow:0,gridH:9},
   {id:'mardi',    label:'Mardi',    oH:9,oM:0,cH:22,cM:0,dow:1,gridH:9},
   {id:'mercredi', label:'Mercredi', oH:9,oM:0,cH:22,cM:0,dow:2,gridH:9},
   {id:'jeudi',    label:'Jeudi',    oH:9,oM:0,cH:22,cM:0,dow:3,gridH:9},
@@ -3267,7 +3269,9 @@ function buildDayTabs(){
   const el=document.getElementById('o-daytabs');el.innerHTML='';
   const activeDays=getActiveDays(wk);
   if(!activeDays.some(d=>d.id===curDay))curDay=activeDays[0].id;
-  const DAY_LETTERS={jeudi:'J',vendredi:'V',samedi:'S',dimanche:'D',mardi:'Ma',mercredi:'Me'};
+  const gt=isGrandeTablee(wk);
+  el.classList.toggle('gt-tabs',gt);
+  const DAY_LETTERS={lundi:'L',mardi:'Ma',mercredi:'Me',jeudi:'J',vendredi:'V',samedi:'S',dimanche:'D'};
   activeDays.forEach(day=>{
     const isClosed=closedDays[wk].has(day.id);
     const d=dayDate(oMon,day.dow);
@@ -6337,7 +6341,7 @@ function buildPdfBlob(){
 
   // Largeurs colonnes (paysage: ~251mm utilisable)
   const usable = pageW - margin*2;
-  const cStation = 5, cRole = 39, cName = 60, cTime = 32;
+  const cStation = isGrandeTablee(wk) ? 0 : 5, cRole = 39, cName = 60, cTime = 32;
   const cNote = usable - cStation - cRole - cName - cTime;
 
   function getRoleDisplayLabel(row){ return row._gtRoleLabel!==undefined?(row._gtRoleLabel||'Rôle'):roleLabel(row.role); }
