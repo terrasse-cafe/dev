@@ -551,6 +551,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
         </div>
       </div>
       <div id="b-past-notice">Semaine passée — les disponibilités ne sont plus modifiables.</div>
+      <div id="b-gt-banner" style="display:none;background:#D1FAE5;border:1px solid #6EE7B7;border-radius:8px;padding:10px 14px;margin-bottom:1rem;font-size:14px;font-weight:500;color:#065F46">Grande tablée cette semaine ✨</div>
       <div style="margin-bottom:1.5rem">
         <div id="b-quota-label" style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Nombre de quarts souhaités</div>
         <div style="display:flex;gap:8px;flex-wrap:nowrap" id="b-shift-chips"></div>
@@ -2870,11 +2871,14 @@ function renderB(){
   const readOnly=isWeekReadOnly(wk);
   const locked=isWeekLocked(wk);
   applyBPastState(readOnly,locked);
+  const gtMode=isGrandeTablee(wk);
+  const gtBanner=document.getElementById('b-gt-banner');
+  if(gtBanner)gtBanner.style.display=gtMode?'block':'none';
   const wrap=document.getElementById('b-days-wrap');wrap.innerHTML='';
-  DAYS.forEach(day=>{
-    const isClosed=(closedDays[wk]||new Set()).has(day.id);
-    const dayShifts=SHIFTS[day.id]||[];
-    const isDayComplet=!isClosed&&dayShifts.length>0&&dayShifts.every(sh=>computePlacesForShift(wk,sh)===0);
+  (gtMode?GT_DAYS:DAYS).forEach(day=>{
+    const isClosed=gtMode?false:(closedDays[wk]||new Set()).has(day.id);
+    const dayShifts=gtMode?[]:(SHIFTS[day.id]||[]);
+    const isDayComplet=!gtMode&&!isClosed&&dayShifts.length>0&&dayShifts.every(sh=>computePlacesForShift(wk,sh)===0);
     const dayData=bSel[wk][day.id]||null;
     const enabled=!!(dayData);
     const card=document.createElement('div');card.className='b-day-card'+(enabled?' active':'');
@@ -2916,7 +2920,7 @@ function renderB(){
     const _vp=_vn?getPerson(_vn):null;
     const _cafO=day.oH*60+day.oM, _cafC=day.cH*60+day.cM;
     let fromMin=null, toMax=null;
-    if(day.id==='dimanche'&&isBrunchActive(wk))fromMin=510;
+    if(!gtMode&&day.id==='dimanche'&&isBrunchActive(wk))fromMin=510;
     if(_vp&&_vp.type==='vol'&&_vp.schedule_json){
       const sj=_vp.schedule_json[day.id];
       if(sj&&sj.on!==false&&sj.s!=null&&sj.e!=null){
