@@ -81,6 +81,9 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:clip}
 .topbar{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap}
 /* Navigation semaine : pas de fond groupé */
 .week-nav{display:inline-flex;align-items:center;gap:6px;background:transparent;padding:0}
+.mode-dropdown{font-size:13px;font-weight:500;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);padding:4px 10px 4px 8px;cursor:pointer;min-width:170px;height:32px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%2357534E' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px}
+.mode-dropdown:disabled{opacity:0.55;cursor:not-allowed}
+.o-stat-panel{padding:6px 10px 4px;font-size:13px;font-style:italic;color:#756F6B}
 /* Flèches : subtle primary, radius 6px, 32px */
 .wbtn{width:32px;height:32px;border-radius:6px;border:1px solid #DEE6E3;background:#DEE6E3;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s,border-color .1s;flex-shrink:0;color:var(--text);box-shadow:none}
 .wbtn:hover{background:#CDD9D5;border-color:#CDD9D5}
@@ -596,14 +599,14 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
   <!-- HORAIRE -->
   <div id="org-horaire" class="pane visible">
     <div class="topbar">
+      <select class="mode-dropdown" id="mode-dropdown" onchange="setGrandeTablee(this.value==='gt')">
+        <option value="reg">Semaine régulière</option>
+        <option value="gt">Grande tablée</option>
+      </select>
       <div class="week-nav" id="o-week-nav">
         <button class="wbtn" onclick="oShift(-1)" title="Semaine précédente"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div id="o-daytabs" style="display:contents"></div>
         <button class="wbtn" onclick="oShift(1)" title="Semaine suivante"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      </div>
-      <div class="stat-wrap">
-        <span class="o-stat-text" id="o-stat">—</span>
-        <div class="stat-tooltip" id="o-stat-tooltip"><span id="o-stat-responded"></span><div class="stat-tooltip-divider" id="o-stat-divider" style="display:none"></div><span class="stat-tooltip-sub" id="o-stat-indispo-label" style="display:none">Indisponibles</span><span id="o-stat-indispo"></span></div>
       </div>
       <div style="flex:1"></div>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
@@ -637,6 +640,10 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
         <div class="h-scroll"><div class="h-grid" id="h-grid"></div></div>
       </div>
       <div>
+        <div class="stat-wrap" id="o-stat-wrap" style="display:block;padding:4px 2px 6px">
+          <span class="o-stat-text" id="o-stat">—</span>
+          <div class="stat-tooltip" id="o-stat-tooltip"><span id="o-stat-responded"></span><div class="stat-tooltip-divider" id="o-stat-divider" style="display:none"></div><span class="stat-tooltip-sub" id="o-stat-indispo-label" style="display:none">Indisponibles</span><span id="o-stat-indispo"></span></div>
+        </div>
         <div class="vol-panel">
           <div class="vp-head">Bénévoles disponibles</div>
           <div class="vol-cards" id="vol-cards"></div>
@@ -1673,7 +1680,7 @@ async function setGrandeTablee(on){
   const wk=wkey(oMon);
   if(on){grandTableeWeeks.add(wk);}else{grandTableeWeeks.delete(wk);}
   await saveGrandTableeWeeks();
-  renderHoraire();
+  renderModeDropdown();buildDayTabs();renderHoraire();
 }
 async function addGtRole(wk,dayId){
   if(!grandTableeRoles[wk])grandTableeRoles[wk]={};
@@ -3127,7 +3134,16 @@ function renderO(){
     indispoEl.style.whiteSpace = 'pre';
     indispoEl.textContent = indispos.map(p => fullName(p)).join('\n');
   }
+  renderModeDropdown();
   buildDayTabs();renderHoraire();
+}
+
+function renderModeDropdown(){
+  const wk=wkey(oMon);
+  const dd=document.getElementById('mode-dropdown');
+  if(!dd)return;
+  dd.value=isGrandeTablee(wk)?'gt':'reg';
+  dd.disabled=isPastWeek();
 }
 
 /* ── Undo / Redo ── */
