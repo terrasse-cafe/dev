@@ -2878,7 +2878,7 @@ function renderB(){
   if(gtBanner)gtBanner.style.display=gtMode?'block':'none';
   const wrap=document.getElementById('b-days-wrap');wrap.innerHTML='';
   (gtMode?GT_DAYS:DAYS).forEach(day=>{
-    const isClosed=gtMode?false:(closedDays[wk]||new Set()).has(day.id);
+    const isClosed=(closedDays[wk]||new Set()).has(day.id);
     const dayShifts=gtMode?[]:(SHIFTS[day.id]||[]);
     const isDayComplet=!gtMode&&!isClosed&&dayShifts.length>0&&dayShifts.every(sh=>computePlacesForShift(wk,sh)===0);
     const dayData=bSel[wk][day.id]||null;
@@ -4538,6 +4538,7 @@ function renderHoraireGT(){
   const TW=dynCOL*numSlots;
   function toPx(h){return Math.round((h-GT_FROM)*2*dynCOL);}
   const past=isPastDay(),wkPast=isPastWeek();
+  const isClosed=(closedDays[wk]||new Set()).has(dayId);
   const autoBtn=document.getElementById('auto-btn');
   if(autoBtn){autoBtn.disabled=true;autoBtn.title='Disponible seulement en semaine régulière';}
   const banner=document.getElementById('past-week-banner');
@@ -4782,6 +4783,15 @@ function renderHoraireGT(){
   }
 
   buildCards(wk,[gtShift]);
+  {const scrollDiv=document.querySelector('.h-scroll');
+  if(scrollDiv){scrollDiv.style.position='relative';
+    const oldOverlay=scrollDiv.querySelector('.day-closed-overlay');if(oldOverlay)oldOverlay.remove();
+    if(isClosed){const overlay=document.createElement('div');overlay.className='day-closed-overlay';
+      overlay.style.cssText='position:absolute;inset:0;background:rgba(247,245,242,.82);backdrop-filter:blur(2px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:var(--radius);z-index:10;pointer-events:all;cursor:default';
+      overlay.innerHTML='<div style="font-size:15px;font-weight:600;color:var(--text-2)">Journée fermée</div><div style="font-size:12px;color:var(--text-3)">Modifiez le statut avec le bouton ci-dessus</div>';
+      overlay.addEventListener('mousedown',e=>e.stopPropagation());overlay.addEventListener('click',e=>e.stopPropagation());
+      overlay.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();});overlay.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();});
+      scrollDiv.appendChild(overlay);}}}
   updateDayBadges();updateUndoBtn();updateRedoBtn();
 }
 
@@ -6374,7 +6384,7 @@ function buildPdfBlob(){
 
   const usedDays = isGrandeTablee(wk) ? GT_DAYS : DAYS;
   usedDays.forEach((day, di) => {
-    const isClosed = isGrandeTablee(wk) ? false : wkClosed.has(day.id);
+    const isClosed = wkClosed.has(day.id);
     const shifts = isGrandeTablee(wk) ? [] : (SHIFTS[day.id] || []);
 
     // Collecter les lignes de ce jour (une entries[] par rôle, une entrée par bénévole)
