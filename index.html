@@ -6288,8 +6288,9 @@ async function openAutoAssign(){
 
 function exportPdfTable(){
   const wk2=wkey(oMon);
-  const openDates=DAYS
-    .filter(d=>!(closedDays[wk2]||new Set()).has(d.id))
+  const _pdfDays=isGrandeTablee(wk2)?GT_DAYS:DAYS;
+  const openDates=_pdfDays
+    .filter(d=>isGrandeTablee(wk2)||!(closedDays[wk2]||new Set()).has(d.id))
     .map(d=>dayDate(oMon,d.dow));
   const pdfYear=openDates.length?openDates[0].getFullYear():oMon.getFullYear();
   const pdfMonths=[...new Set(openDates.map(d=>d.toLocaleDateString('fr-CA',{month:'long'})))];
@@ -6335,6 +6336,7 @@ function buildPdfBlob(){
   const cStation = 5, cRole = 39, cName = 60, cTime = 32;
   const cNote = usable - cStation - cRole - cName - cTime;
 
+  function getRoleDisplayLabel(row){ return row._gtRoleLabel!==undefined?(row._gtRoleLabel||'Rôle'):roleLabel(row.role); }
   let y = margin;
 
   // ── En-tête de page (bandeau coloré) ──
@@ -6362,10 +6364,10 @@ function buildPdfBlob(){
     y += 6;
   }
 
-  const usedDays = DAYS;
+  const usedDays = isGrandeTablee(wk) ? GT_DAYS : DAYS;
   usedDays.forEach((day, di) => {
-    const shifts = SHIFTS[day.id] || [];
-    const isClosed = wkClosed.has(day.id);
+    const isClosed = isGrandeTablee(wk) ? false : wkClosed.has(day.id);
+    const shifts = isGrandeTablee(wk) ? [] : (SHIFTS[day.id] || []);
 
     // Collecter les lignes de ce jour (une entries[] par rôle, une entrée par bénévole)
     const rows = [];
@@ -6420,6 +6422,7 @@ function buildPdfBlob(){
         rows.push({shift, role, isOpt, entries});
       });
     });
+    if(isGrandeTablee(wk)){const _gts='gt-'+day.id,_gtr=getGtRoles(wk,day.id),_gtsObj={id:_gts,fromH:9,toH:22,label:'Grande tablée'};_gtr.forEach(role=>{const _ns=getAssigns(wk,_gts,role.id);const _en=_ns.length?_ns.map(name=>{const ct=getAssignTimes(wk,_gts,role.id,name);const _p=getPerson(name);return{name:_p?fullName(_p):name,timeStr:ct?mStr(ct.s)+' – '+mStr(ct.e):'',note:getAssignNote(wk,_gts,role.id,name)||'',sortS:ct?ct.s:540,sortE:ct?ct.e:1320};}).sort((a,b)=>a.sortS!==b.sortS?a.sortS-b.sortS:(a.sortE-a.sortS)-(b.sortE-b.sortS)):[{name:'',timeStr:'',note:''}];rows.push({shift:_gtsObj,role:role.id,_gtRoleLabel:role.label||'Rôle',isOpt:false,entries:_en});});}
 
     const dayHeaderH = 9;
     const shiftBandH = 5;
@@ -6503,7 +6506,7 @@ function buildPdfBlob(){
           return { entry, noteLines, h: Math.max(minEntryH, noteLines.length * lineH + 2.5) };
         });
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
-        const roleLines_ = doc.splitTextToSize(roleLabel(row.role), cRole - 5);
+        const roleLines_ = doc.splitTextToSize(getRoleDisplayLabel(row), cRole - 5);
         const roleH_ = roleLines_.length > 1 ? roleLines_.length * lineH + 2 : 0;
         const totalRowH = Math.max(entryData.reduce((s, e) => s + e.h, 0), roleH_);
         return { row, entryData, totalRowH };
@@ -6554,7 +6557,7 @@ function buildPdfBlob(){
       const roleLineMap = new Map();
       segRowData.forEach(({ row }) => {
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
-        const lines = doc.splitTextToSize(roleLabel(row.role), cRole - 5);
+        const lines = doc.splitTextToSize(getRoleDisplayLabel(row), cRole - 5);
         roleLineMap.set(row.role, lines);
       });
 
@@ -6570,7 +6573,7 @@ function buildPdfBlob(){
 
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
         setTextColor(C.text2);
-        const roleText = roleLabel(row.role);
+        const roleText = getRoleDisplayLabel(row);
         const roleLines = roleLineMap.get(row.role) || doc.splitTextToSize(roleText, cRole - 5);
         if (roleLines.length === 1) {
           doc.text(roleLines[0], margin + cStation + 3, y + totalRowH / 2 + 1.5);
