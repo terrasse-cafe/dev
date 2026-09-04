@@ -1369,6 +1369,8 @@ let oMon=(()=>{
   return getMonday(new Date());
 })();
 let brunchWeeks=new Set(); // Set<wk> — semaines où le brunch du dimanche est actif
+let grandTableeWeeks=new Set(); // Set<wk> — semaines Grande tablée
+let grandTableeRoles={}; // {wk:{dayId:[{id,label}]}} — rôles custom Grande tablée
 let trainingRoleShifts=new Set(); // Set<"wk|shiftId"> — shifts où Bénévole en formation est actif
 
 // Semaine bénévole : si on est lun-mer → semaine prochaine (prochain jeudi)
@@ -1640,6 +1642,60 @@ async function setBrunch(on){
   renderStatusToggle();renderHoraire();
 }
 
+function isGrandeTablee(wk){ return grandTableeWeeks.has(wk); }
+function gtRoleId(){ return 'gtr-'+Math.random().toString(36).slice(2,9); }
+function getGtRoles(wk,dayId){ return (grandTableeRoles[wk]||{})[dayId]||[]; }
+async function loadGrandTableeWeeks(){
+  if(!sb)return;
+  grandTableeWeeks=new Set();
+  const {data}=await sb.from('org_config').select('value').eq('key','grande_tablee_weeks').maybeSingle();
+  if(!data?.value)return;
+  try{const arr=JSON.parse(data.value);if(Array.isArray(arr))grandTableeWeeks=new Set(arr);}
+  catch(e){console.error('loadGrandTableeWeeks:',e);}
+}
+async function saveGrandTableeWeeks(){
+  if(!sb)return;
+  await sb.from('org_config').upsert({key:'grande_tablee_weeks',value:JSON.stringify([...grandTableeWeeks])},{onConflict:'key'});
+}
+async function loadGrandTableeRoles(){
+  if(!sb)return;
+  grandTableeRoles={};
+  const {data}=await sb.from('org_config').select('value').eq('key','grande_tablee_roles').maybeSingle();
+  if(!data?.value)return;
+  try{const obj=JSON.parse(data.value);if(obj&&typeof obj==='object')grandTableeRoles=obj;}
+  catch(e){console.error('loadGrandTableeRoles:',e);}
+}
+async function saveGrandTableeRoles(){
+  if(!sb)return;
+  await sb.from('org_config').upsert({key:'grande_tablee_roles',value:JSON.stringify(grandTableeRoles)},{onConflict:'key'});
+}
+async function setGrandeTablee(on){
+  const wk=wkey(oMon);
+  if(on){grandTableeWeeks.add(wk);}else{grandTableeWeeks.delete(wk);}
+  await saveGrandTableeWeeks();
+  renderHoraire();
+}
+async function addGtRole(wk,dayId){
+  if(!grandTableeRoles[wk])grandTableeRoles[wk]={};
+  if(!grandTableeRoles[wk][dayId])grandTableeRoles[wk][dayId]=[];
+  const id=gtRoleId();
+  grandTableeRoles[wk][dayId].push({id,label:''});
+  await saveGrandTableeRoles();
+  return id;
+}
+async function removeGtRole(wk,dayId,roleId){
+  if(!(grandTableeRoles[wk]||{})[dayId])return;
+  const shiftId='gt-'+dayId;
+  const names=getAssigns(wk,shiftId,roleId).slice();
+  for(const name of names){removeAssign(wk,shiftId,roleId,name);await deleteAssignment(wk,shiftId,roleId,name);}
+  grandTableeRoles[wk][dayId]=grandTableeRoles[wk][dayId].filter(r=>r.id!==roleId);
+  await saveGrandTableeRoles();
+}
+async function renameGtRole(wk,dayId,roleId,newLabel){
+  const roles=(grandTableeRoles[wk]||{})[dayId]||[];
+  const r=roles.find(r=>r.id===roleId);
+  if(r){r.label=newLabel;await saveGrandTableeRoles();}
+}
 function trainingKey(wk,shiftId){return wk+'|'+shiftId;}
 function isTrainingActive(wk,shiftId){return trainingRoleShifts.has(trainingKey(wk,shiftId));}
 async function loadTrainingRoleShifts(){
@@ -1816,6 +1872,13 @@ function subscribeRealtimeVol(wk){
         if(key==='brunch_weeks'){
           await loadBrunchWeeks();
           if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
+        }else if(key==='grande_tablee_weeks'){
+          await loadGrandTableeWeeks();
+          if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
+          if(document.getElementById('b-week-section')?.style.display==='none')renderHoraire();
+        }else if(key==='grande_tablee_roles'){
+          await loadGrandTableeRoles();
+          if(document.getElementById('b-week-section')?.style.display==='none')renderHoraire();
         }else if(key==='slot_overrides'){
           await loadSlotOverrides();
           if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
@@ -1836,6 +1899,8 @@ async function bootOrgData() {
   await loadAssignments(wk);
   await loadSlotOverrides();
   await loadBrunchWeeks();
+  await loadGrandTableeWeeks();
+  await loadGrandTableeRoles();
   await loadTrainingRoleShifts();
   const {data:cdRow}=await sb.from('org_config').select('value').eq('key','closed_days').maybeSingle();
   if(cdRow?.value){
@@ -1860,6 +1925,8 @@ async function bootVolData(wk) {
     loadAvail(prevWk),
     loadClosedDaysForVol(),
     loadBrunchWeeks(),
+    loadGrandTableeWeeks(),
+    loadGrandTableeRoles(),
     loadTrainingRoleShifts(),
     loadAssignments(wk),
   ]);
