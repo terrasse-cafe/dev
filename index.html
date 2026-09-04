@@ -645,6 +645,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
           <div class="tog-track"><div class="tog-thumb"></div></div>
         </label>
       </div>
+      <div id="gt-hours-wrap" style="display:none;align-items:center;gap:6px"></div>
     </div>
     <div class="h-layout">
       <div>
@@ -1398,6 +1399,7 @@ let oMon=(()=>{
 let brunchWeeks=new Set(); // Set<wk> — semaines où le brunch du dimanche est actif
 let grandTableeWeeks=new Set(); // Set<wk> — semaines Grande tablée
 let grandTableeRoles={}; // {wk:{dayId:[{id,label}]}} — rôles custom Grande tablée
+let gtDayHours={}; // {wk:{dayId:{from:mins,to:mins}}} — heures custom par jour GT
 let trainingRoleShifts=new Set(); // Set<"wk|shiftId"> — shifts où Bénévole en formation est actif
 
 // Semaine bénévole : si on est lun-mer → semaine prochaine (prochain jeudi)
@@ -1699,6 +1701,25 @@ async function saveGrandTableeRoles(){
   if(!sb)return;
   await sb.from('org_config').upsert({key:'grande_tablee_roles',value:JSON.stringify(grandTableeRoles)},{onConflict:'key'});
 }
+function getGtDayFrom(wk,dayId){const h=(gtDayHours[wk]||{})[dayId];if(h?.from!=null)return h.from;return(GT_DAYS.find(d=>d.id===dayId)||{oH:9}).oH*60;}
+function getGtDayTo(wk,dayId){const h=(gtDayHours[wk]||{})[dayId];if(h?.to!=null)return h.to;return(GT_DAYS.find(d=>d.id===dayId)||{cH:18}).cH*60;}
+async function loadGtDayHours(){
+  if(!sb)return;
+  gtDayHours={};
+  const {data}=await sb.from('org_config').select('value').eq('key','gt_day_hours').maybeSingle();
+  if(!data?.value)return;
+  try{const obj=JSON.parse(data.value);if(obj&&typeof obj==='object')gtDayHours=obj;}catch(e){console.error('loadGtDayHours:',e);}
+}
+async function saveGtDayHours(){
+  if(!sb)return;
+  await sb.from('org_config').upsert({key:'gt_day_hours',value:JSON.stringify(gtDayHours)},{onConflict:'key'});
+}
+async function setGtDayHours(wk,dayId,from,to){
+  if(!gtDayHours[wk])gtDayHours[wk]={};
+  gtDayHours[wk][dayId]={from,to};
+  await saveGtDayHours();
+  renderStatusToggle();renderHoraire();
+}
 async function setGrandeTablee(on){
   const wk=wkey(oMon);
   if(on){grandTableeWeeks.add(wk);}else{grandTableeWeeks.delete(wk);}
@@ -1909,6 +1930,10 @@ function subscribeRealtimeVol(wk){
         }else if(key==='grande_tablee_roles'){
           await loadGrandTableeRoles();
           if(document.getElementById('b-week-section')?.style.display==='none')renderHoraire();
+        }else if(key==='gt_day_hours'){
+          await loadGtDayHours();
+          if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
+          if(document.getElementById('b-week-section')?.style.display==='none')renderHoraire();
         }else if(key==='slot_overrides'){
           await loadSlotOverrides();
           if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
@@ -1931,6 +1956,7 @@ async function bootOrgData() {
   await loadBrunchWeeks();
   await loadGrandTableeWeeks();
   await loadGrandTableeRoles();
+  await loadGtDayHours();
   await loadTrainingRoleShifts();
   const {data:cdRow}=await sb.from('org_config').select('value').eq('key','closed_days').maybeSingle();
   if(cdRow?.value){
@@ -1957,6 +1983,7 @@ async function bootVolData(wk) {
     loadBrunchWeeks(),
     loadGrandTableeWeeks(),
     loadGrandTableeRoles(),
+    loadGtDayHours(),
     loadTrainingRoleShifts(),
     loadAssignments(wk),
   ]);
@@ -2920,7 +2947,7 @@ function renderB(){
     // Bornes personnalisées si bénévole récurrent avec schedule_json
     const _vn=document.getElementById('vol-select').value;
     const _vp=_vn?getPerson(_vn):null;
-    const _cafO=day.oH*60+day.oM, _cafC=day.cH*60+day.cM;
+    const _cafO=gtMode?getGtDayFrom(wk,day.id):day.oH*60+day.oM, _cafC=gtMode?getGtDayTo(wk,day.id):day.cH*60+day.cM;
     let fromMin=null, toMax=null;
     if(!gtMode&&day.id==='dimanche'&&isBrunchActive(wk))fromMin=510;
     if(_vp&&_vp.type==='vol'&&_vp.schedule_json){
@@ -3315,6 +3342,38 @@ function renderStatusToggle(){
       brunchWrap.style.display='none';
     }
   }
+  const gtHoursWrap=document.getElementById('gt-hours-wrap');
+  if(gtHoursWrap){
+    if(isGrandeTablee(wk)){
+      gtHoursWrap.style.display='flex';
+      gtHoursWrap.style.opacity=dayPast?'0.55':'1';
+      gtHoursWrap.style.pointerEvents=dayPast?'none':'auto';
+      gtHoursWrap.innerHTML='';
+      const curFrom=getGtDayFrom(wk,curDay);
+      const curTo=getGtDayTo(wk,curDay);
+      const lbl=document.createElement('span');lbl.style.cssText='font-size:12px;font-weight:500;color:var(--text)';lbl.textContent='Heures :';
+      gtHoursWrap.appendChild(lbl);
+      function makeHrSel(type,savedVal,minM,maxM){
+        const sel=document.createElement('select');sel.style.cssText='font-size:12px;border:1px solid var(--border);border-radius:5px;padding:2px 4px;background:var(--surface);color:var(--text);cursor:pointer';
+        for(let m=minM;m<=maxM;m+=30){const o=document.createElement('option');o.value=m;o.textContent=mStr(m);if(m===savedVal)o.selected=true;sel.appendChild(o);}
+        return sel;
+      }
+      const fromSel=makeHrSel('from',curFrom,9*60,curTo-30);
+      const toSel=makeHrSel('to',curTo,curFrom+30,22*60);
+      const dash=document.createElement('span');dash.style.cssText='font-size:12px;color:var(--text-2)';dash.textContent='–';
+      fromSel.addEventListener('change',async()=>{
+        const f=parseInt(fromSel.value),t=Math.max(f+30,curTo);
+        await setGtDayHours(wk,curDay,f,t);
+      });
+      toSel.addEventListener('change',async()=>{
+        const t=parseInt(toSel.value),f=Math.min(curFrom,t-30);
+        await setGtDayHours(wk,curDay,f,t);
+      });
+      gtHoursWrap.appendChild(fromSel);gtHoursWrap.appendChild(dash);gtHoursWrap.appendChild(toSel);
+    }else{
+      gtHoursWrap.style.display='none';
+    }
+  }
 }
 
 function setDayOpen(open){
@@ -3335,7 +3394,7 @@ function setDayOpen(open){
 
 /* ── avail helpers ── */
 function volAvailFloorMins(wk,dayId){
-  if(isGrandeTablee(wk))return 9*60;
+  if(isGrandeTablee(wk))return getGtDayFrom(wk,dayId);
   const day=DAYS.find(d=>d.id===dayId);
   if(!day)return 0;
   if(day.id==='dimanche'&&isBrunchActive(wk))return 510;
@@ -3347,7 +3406,7 @@ function volDayRange(wk,name){
     const slots=entry.slots||{};
     const day=isGrandeTablee(wk)?GT_DAYS.find(d=>d.id===curDay):DAYS.find(d=>d.id===curDay);if(!day)return null;
     const openS=Math.round((volAvailFloorMins(wk,curDay)-GSH*60)/30);
-    const closeS=Math.round((day.cH*60+(day.cM||0)-GSH*60)/30);
+    const closeS=Math.round(((isGrandeTablee(wk)?getGtDayTo(wk,curDay):day.cH*60+(day.cM||0))-GSH*60)/30);
     let first=null,last=null;
     for(let s=openS;s<closeS;s++){if(slots[skey(curDay,s)]){if(first===null)first=s;last=s+1;}}
     if(first===null)return null;
@@ -4535,7 +4594,7 @@ function volWeekShiftCount(wk, name) {
 
 function renderHoraireGT(){
   const wk=wkey(oMon),dayId=curDay;
-  const GT_FROM=9,GT_TO=(GT_DAYS.find(d=>d.id===dayId)||{cH:22}).cH;
+  const GT_FROM=getGtDayFrom(wk,dayId)/60,GT_TO=getGtDayTo(wk,dayId)/60;
   const CHIP_H_BASE=26;
   const numSlots=(GT_TO-GT_FROM)*2;
   const hScroll=document.querySelector('.h-scroll');
@@ -5852,7 +5911,7 @@ function volDayRangeFor(wk,name,dayId){
     const slots=entry.slots||{};
     const day=isGrandeTablee(wk)?GT_DAYS.find(d=>d.id===dayId):DAYS.find(d=>d.id===dayId);if(!day)return null;
     const openS=Math.round((volAvailFloorMins(wk,dayId)-GSH*60)/30);
-    const closeS=Math.round((day.cH*60+(day.cM||0)-GSH*60)/30);
+    const closeS=Math.round(((isGrandeTablee(wk)?getGtDayTo(wk,dayId):day.cH*60+(day.cM||0))-GSH*60)/30);
     let first=null,last=null;
     for(let s=openS;s<closeS;s++){if(slots[skey(dayId,s)]){if(first===null)first=s;last=s+1;}}
     if(first===null)return null;
