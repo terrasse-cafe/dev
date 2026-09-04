@@ -3344,7 +3344,7 @@ function volDayRange(wk,name){
   const entry=(avail[wk]||{})[name];
   if(entry){
     const slots=entry.slots||{};
-    const day=DAYS.find(d=>d.id===curDay);if(!day)return null;
+    const day=getActiveDay(wk,curDay);if(!day)return null;
     const openS=Math.round((volAvailFloorMins(wk,curDay)-GSH*60)/30);
     const closeS=Math.round((day.cH*60+(day.cM||0)-GSH*60)/30);
     let first=null,last=null;
