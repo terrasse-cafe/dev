@@ -1194,10 +1194,10 @@ function applyLang(){
 }
 
 const DAYS=[
-  {id:'jeudi',    label:'Jeudi',    oH:9,oM:0, cH:18,cM:0, dow:3, gridH:9},
-  {id:'vendredi', label:'Vendredi', oH:9,oM:0, cH:22,cM:0, dow:4, gridH:9},
-  {id:'samedi',   label:'Samedi',   oH:9,oM:0, cH:22,cM:0, dow:5, gridH:9},
-  {id:'dimanche', label:'Dimanche', oH:9,oM:0, cH:18,cM:0, dow:6, gridH:9},
+  {id:'jeudi',    label:'Jeudi',    oH:15,oM:0, cH:21,cM:0,  dow:3, gridH:10},
+  {id:'vendredi', label:'Vendredi', oH:11,oM:0, cH:21,cM:30, dow:4, gridH:10},
+  {id:'samedi',   label:'Samedi',   oH:11,oM:0, cH:21,cM:30, dow:5, gridH:10},
+  {id:'dimanche', label:'Dimanche', oH:11,oM:0, cH:17,cM:0,  dow:6, gridH:10},
 ];
 const GT_DAYS=[
   {id:'lundi',    label:'Lundi',    oH:9,oM:0,cH:18,cM:0,dow:0,gridH:9},
@@ -5441,16 +5441,16 @@ const PM_SCHED_DAYS=[
   {id:'dimanche',label:'Dimanche'},
 ];
 const EMP_DAY_CONFIG=[
-  {id:'jeudi',    label:'Jeudi',    defS:540,defE:1080,maxE:1080},
-  {id:'vendredi', label:'Vendredi', defS:540,defE:1320,maxE:1320},
-  {id:'samedi',   label:'Samedi',   defS:540,defE:1320,maxE:1320},
-  {id:'dimanche', label:'Dimanche', defS:540,defE:1080,maxE:1080},
+  {id:'jeudi',    label:'Jeudi',    defS:600,defE:1260,maxE:1260},
+  {id:'vendredi', label:'Vendredi', defS:600,defE:1290,maxE:1290},
+  {id:'samedi',   label:'Samedi',   defS:600,defE:1290,maxE:1290},
+  {id:'dimanche', label:'Dimanche', defS:600,defE:1020,maxE:1020},
 ];
 const VOL_DAY_CONFIG=[
-  {id:'jeudi',    label:'Jeudi',    minS:540,defS:540, defE:1080,maxE:1080},
-  {id:'vendredi', label:'Vendredi', minS:540,defS:540, defE:1320,maxE:1320},
-  {id:'samedi',   label:'Samedi',   minS:540,defS:540, defE:1320,maxE:1320},
-  {id:'dimanche', label:'Dimanche', minS:540,defS:540, defE:1080,maxE:1080},
+  {id:'jeudi',    label:'Jeudi',    minS:600,defS:900, defE:1260,maxE:1260},
+  {id:'vendredi', label:'Vendredi', minS:600,defS:660, defE:1290,maxE:1290},
+  {id:'samedi',   label:'Samedi',   minS:600,defS:660, defE:1290,maxE:1290},
+  {id:'dimanche', label:'Dimanche', minS:600,defS:660, defE:1020,maxE:1020},
 ];
 let pmScheduleState={};
 function buildEmpSelect(minM,maxM,savedVal){
