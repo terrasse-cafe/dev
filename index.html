@@ -3359,7 +3359,7 @@ function renderStatusToggle(){
       const curFrom=getGtDayFrom(wk,curDay);
       const curTo=getGtDayTo(wk,curDay);
       const descInp=document.createElement('input');descInp.type='text';descInp.placeholder='Description du jour…';descInp.value=getGtDayDesc(wk,curDay);
-      descInp.style.cssText='font-size:12px;border:1px solid var(--border);border-radius:5px;padding:3px 7px;background:var(--surface);color:var(--text);width:180px;outline:none';
+      descInp.style.cssText='font-size:12px;border:1px solid var(--border);border-radius:5px;padding:3px 7px;background:var(--surface);color:var(--text);width:270px;outline:none';
       let _dt;descInp.addEventListener('input',()=>{clearTimeout(_dt);_dt=setTimeout(async()=>{await setGtDayDesc(wk,curDay,descInp.value.trim());},600);});
       gtHoursWrap.appendChild(descInp);
       const sep=document.createElement('div');sep.style.cssText='width:1px;height:16px;background:var(--border);margin:0 2px';gtHoursWrap.appendChild(sep);
