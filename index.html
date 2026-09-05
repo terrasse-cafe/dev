@@ -629,13 +629,13 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
     <div id="past-week-banner">Semaine passée — lecture seule</div>
     <div class="day-status-bar" id="day-status-bar">
       <div class="status-toggle">
-        <button class="status-btn" id="status-btn-open" onclick="setDayOpen(true)">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><path d="M8 0.667V2M8 14v1.333M2.813 2.813l.947.947M12.24 12.24l.947.947M0.667 8H2M14 8h1.333M2.813 13.187l.947-.947M12.24 3.76l.947-.947M11.333 8a3.333 3.333 0 1 1-6.666 0 3.333 3.333 0 0 1 6.666 0Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Ouvert
-        </button>
         <button class="status-btn" id="status-btn-closed" onclick="setDayOpen(false)">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;overflow:visible"><path d="M5.333 12.667V14M5.333 8.667V10M10.667 12.667V14M10.667 8.667V10M8 14v1.333M8 10v1.333M13.333 11.053a3.333 3.333 0 0 0-1.333-6.387h-.84A6 6 0 1 0 2.667 10.167" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Fermé
+        </button>
+        <button class="status-btn" id="status-btn-open" onclick="setDayOpen(true)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><path d="M8 0.667V2M8 14v1.333M2.813 2.813l.947.947M12.24 12.24l.947.947M0.667 8H2M14 8h1.333M2.813 13.187l.947-.947M12.24 3.76l.947-.947M11.333 8a3.333 3.333 0 1 1-6.666 0 3.333 3.333 0 0 1 6.666 0Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Ouvert
         </button>
       </div>
       <div id="brunch-toggle-wrap" style="display:none;align-items:center;gap:6px">
@@ -1703,6 +1703,7 @@ async function saveGrandTableeRoles(){
 }
 function getGtDayFrom(wk,dayId){const h=(gtDayHours[wk]||{})[dayId];if(h?.from!=null)return h.from;return(GT_DAYS.find(d=>d.id===dayId)||{oH:9}).oH*60;}
 function getGtDayTo(wk,dayId){const h=(gtDayHours[wk]||{})[dayId];if(h?.to!=null)return h.to;return(GT_DAYS.find(d=>d.id===dayId)||{cH:18}).cH*60;}
+function getGtDayDesc(wk,dayId){return(gtDayHours[wk]||{})[dayId]?.desc??'';}
 async function loadGtDayHours(){
   if(!sb)return;
   gtDayHours={};
@@ -1716,9 +1717,14 @@ async function saveGtDayHours(){
 }
 async function setGtDayHours(wk,dayId,from,to){
   if(!gtDayHours[wk])gtDayHours[wk]={};
-  gtDayHours[wk][dayId]={from,to};
+  gtDayHours[wk][dayId]={...(gtDayHours[wk][dayId]||{}),from,to};
   await saveGtDayHours();
   renderStatusToggle();renderHoraire();
+}
+async function setGtDayDesc(wk,dayId,desc){
+  if(!gtDayHours[wk])gtDayHours[wk]={};
+  gtDayHours[wk][dayId]={...(gtDayHours[wk][dayId]||{}),desc};
+  await saveGtDayHours();
 }
 async function setGrandeTablee(on){
   const wk=wkey(oMon);
@@ -2944,6 +2950,7 @@ function renderB(){
       }
     }
     card.appendChild(head);
+    if(gtMode){const _desc=getGtDayDesc(wk,day.id);if(_desc){const _de=document.createElement('div');_de.style.cssText='font-size:12px;color:var(--text-2);padding:6px 0 2px 0;line-height:1.4';_de.textContent=_desc;card.appendChild(_de);}}
     // Bornes personnalisées si bénévole récurrent avec schedule_json
     const _vn=document.getElementById('vol-select').value;
     const _vp=_vn?getPerson(_vn):null;
@@ -3351,6 +3358,11 @@ function renderStatusToggle(){
       gtHoursWrap.innerHTML='';
       const curFrom=getGtDayFrom(wk,curDay);
       const curTo=getGtDayTo(wk,curDay);
+      const descInp=document.createElement('input');descInp.type='text';descInp.placeholder='Description du jour…';descInp.value=getGtDayDesc(wk,curDay);
+      descInp.style.cssText='font-size:12px;border:1px solid var(--border);border-radius:5px;padding:3px 7px;background:var(--surface);color:var(--text);width:180px;outline:none';
+      let _dt;descInp.addEventListener('input',()=>{clearTimeout(_dt);_dt=setTimeout(async()=>{await setGtDayDesc(wk,curDay,descInp.value.trim());},600);});
+      gtHoursWrap.appendChild(descInp);
+      const sep=document.createElement('div');sep.style.cssText='width:1px;height:16px;background:var(--border);margin:0 2px';gtHoursWrap.appendChild(sep);
       const lbl=document.createElement('span');lbl.style.cssText='font-size:12px;font-weight:500;color:var(--text)';lbl.textContent='Heures :';
       gtHoursWrap.appendChild(lbl);
       function makeHrSel(type,savedVal,minM,maxM){
